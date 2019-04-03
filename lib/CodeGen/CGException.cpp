@@ -57,7 +57,12 @@ llvm::FunctionCallee CodeGenModule::getTerminateFn() {
   // In C++, use std::terminate().
   if (getLangOpts().CPlusPlus &&
       getTarget().getCXXABI().isItaniumFamily()) {
-    name = "_ZSt9terminatev";
+      if (getLangOpts().Static) {
+        name = "_ZSt9terminatev";
+      }
+      else {
+        name = "__imp__ZSt9terminatev";
+      }
   } else if (getLangOpts().CPlusPlus &&
              getTarget().getCXXABI().isMicrosoft()) {
     if (getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015))

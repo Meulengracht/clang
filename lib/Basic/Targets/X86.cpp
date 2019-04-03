@@ -886,6 +886,11 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     CodeModel = "small";
   Builder.defineMacro("__code_model_" + CodeModel + "_");
 
+  if (Opts.Static)
+    Builder.defineMacro("__STATIC__");
+  else
+    Builder.defineMacro("__DYNAMIC__");
+
   // Target identification.
   if (getTriple().getArch() == llvm::Triple::x86_64) {
     Builder.defineMacro("__amd64__");

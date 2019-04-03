@@ -2959,7 +2959,7 @@ GetRuntimeFunctionDecl(ASTContext &C, StringRef Name) {
 
   // Demangle the premangled name from getTerminateFn()
   IdentifierInfo &CXXII =
-      (Name == "_ZSt9terminatev" || Name == "?terminate@@YAXXZ")
+      (Name == "_ZSt9terminatev" || Name == "__imp__ZSt9terminatev" || Name == "?terminate@@YAXXZ")
           ? C.Idents.get("terminate")
           : C.Idents.get(Name);
 
@@ -2999,7 +2999,8 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
 
       if (!Local && getTriple().isOSBinFormatCOFF() &&
           !getCodeGenOpts().LTOVisibilityPublicStd &&
-          !getTriple().isWindowsGNUEnvironment()) {
+          !getTriple().isWindowsGNUEnvironment() &&
+          !getLangOpts().Static) {
         const FunctionDecl *FD = GetRuntimeFunctionDecl(Context, Name);
         if (!FD || FD->hasAttr<DLLImportAttr>()) {
           F->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
@@ -4404,6 +4405,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
     llvm_unreachable("unknown file format");
   case llvm::Triple::XCOFF:
     llvm_unreachable("XCOFF is not yet implemented");
+  case llvm::Triple::VPE:
   case llvm::Triple::COFF:
   case llvm::Triple::ELF:
   case llvm::Triple::Wasm:
