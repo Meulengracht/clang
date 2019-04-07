@@ -366,9 +366,10 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
   const llvm::Triple &TT = getTriple();
   bool IsITANMSVCWindows =
       TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment();
+  bool IsVali = TT.isOSVali();
 
   const char *Prefix =
-      IsITANMSVCWindows || Type == ToolChain::FT_Object ? "" : "lib";
+      IsITANMSVCWindows || IsVali || Type == ToolChain::FT_Object ? "" : "lib";
   const char *Suffix;
   switch (Type) {
   case ToolChain::FT_Object:
@@ -378,8 +379,8 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
     Suffix = IsITANMSVCWindows ? ".lib" : ".a";
     break;
   case ToolChain::FT_Shared:
-    Suffix = Triple.isOSWindows()
-                 ? (Triple.isWindowsGNUEnvironment() ? ".dll.a" : ".lib")
+    Suffix = Triple.isOSWindows() || IsVali
+            ? (Triple.isWindowsGNUEnvironment() || IsVali ? ".dll.a" : ".lib")
                  : ".so";
     break;
   }
