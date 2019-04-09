@@ -306,6 +306,39 @@ struct FormatStyle {
   /// If ``true``, ``if (a) return;`` can be put on a single line.
   ShortIfStyle AllowShortIfStatementsOnASingleLine;
 
+  /// Different styles for merging short lambdas containing at most one
+  /// statement.
+  enum ShortLambdaStyle {
+    /// Never merge lambdas into a single line.
+    SLS_None,
+    /// Only merge empty lambdas.
+    /// \code
+    ///   auto lambda = [](int a) {}
+    ///   auto lambda2 = [](int a) {
+    ///       return a;
+    ///   };
+    /// \endcode
+    SLS_Empty,
+    /// Merge lambda into a single line if argument of a function.
+    /// \code
+    ///   auto lambda = [](int a) {
+    ///       return a;
+    ///   };
+    ///   sort(a.begin(), a.end(), ()[] { return x < y; })
+    /// \endcode
+    SLS_Inline,
+    /// Merge all lambdas fitting on a single line.
+    /// \code
+    ///   auto lambda = [](int a) {}
+    ///   auto lambda2 = [](int a) { return a; };
+    /// \endcode
+    SLS_All,
+  };
+
+  /// Dependent on the value, ``auto lambda []() { return 0; }`` can be put on a
+  /// single line.
+  ShortLambdaStyle AllowShortLambdasOnASingleLine;
+
   /// If ``true``, ``while (true) continue;`` can be put on a single
   /// line.
   bool AllowShortLoopsOnASingleLine;
@@ -682,6 +715,22 @@ struct FormatStyle {
   ///       AfterClass: true
   /// \endcode
   struct BraceWrappingFlags {
+    /// Wrap case labels.
+    /// \code
+    ///   false:                                true:
+    ///   switch (foo) {                vs.     switch (foo) {
+    ///     case 1: {                             case 1:
+    ///       bar();                              {
+    ///       break;                                bar();
+    ///     }                                       break;
+    ///     default: {                            }
+    ///       plop();                             default:
+    ///     }                                     {
+    ///   }                                         plop();
+    ///                                           }
+    ///                                         }
+    /// \endcode
+    bool AfterCaseLabel;
     /// Wrap class definitions.
     /// \code
     ///   true:
@@ -1595,6 +1644,13 @@ struct FormatStyle {
   /// \endcode
   bool SpaceAfterCStyleCast;
 
+  /// If ``true``, a space is inserted after the logical not operator (``!``).
+  /// \code
+  ///    true:                                  false:
+  ///    ! someExpression();            vs.     !someExpression();
+  /// \endcode
+  bool SpaceAfterLogicalNot;
+
   /// If \c true, a space will be inserted after the 'template' keyword.
   /// \code
   ///    true:                                  false:
@@ -1657,6 +1713,17 @@ struct FormatStyle {
     ///    }
     /// \endcode
     SBPO_ControlStatements,
+    /// Put a space before opening parentheses only if the parentheses are not
+    /// empty i.e. '()'
+    /// \code
+    ///   void() {
+    ///     if (true) {
+    ///       f();
+    ///       g (x, y, z);
+    ///     }
+    ///   }
+    /// \endcode
+    SBPO_NonEmptyParentheses,
     /// Always put a space before opening parentheses, except when it's
     /// prohibited by the syntax rules (in function-like macro definitions) or
     /// when determined by other style rules (after unary operators, opening
@@ -1805,6 +1872,7 @@ struct FormatStyle {
                R.AllowShortFunctionsOnASingleLine &&
            AllowShortIfStatementsOnASingleLine ==
                R.AllowShortIfStatementsOnASingleLine &&
+           AllowShortLambdasOnASingleLine == R.AllowShortLambdasOnASingleLine &&
            AllowShortLoopsOnASingleLine == R.AllowShortLoopsOnASingleLine &&
            AlwaysBreakAfterReturnType == R.AlwaysBreakAfterReturnType &&
            AlwaysBreakBeforeMultilineStrings ==
@@ -1866,6 +1934,7 @@ struct FormatStyle {
            PointerAlignment == R.PointerAlignment &&
            RawStringFormats == R.RawStringFormats &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
+           SpaceAfterLogicalNot == R.SpaceAfterLogicalNot &&
            SpaceAfterTemplateKeyword == R.SpaceAfterTemplateKeyword &&
            SpaceBeforeAssignmentOperators == R.SpaceBeforeAssignmentOperators &&
            SpaceBeforeCpp11BracedList == R.SpaceBeforeCpp11BracedList &&

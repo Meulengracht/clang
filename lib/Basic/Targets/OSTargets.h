@@ -848,6 +848,21 @@ public:
       : WebAssemblyOSTargetInfo<Target>(Triple, Opts) {}
 };
 
+// Emscripten target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY EmscriptenTargetInfo
+    : public WebAssemblyOSTargetInfo<Target> {
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const final {
+    WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+    Builder.defineMacro("__EMSCRIPTEN__");
+  }
+
+public:
+  explicit EmscriptenTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : WebAssemblyOSTargetInfo<Target>(Triple, Opts) {}
+};
+
 // Vali target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY ValiTargetInfo : public OSTargetInfo<Target> {

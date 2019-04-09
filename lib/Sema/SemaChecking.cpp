@@ -307,6 +307,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   //  - Analyze the format string of sprintf to see how much of buffer is used.
   //  - Evaluate strlen of strcpy arguments, use as object size.
 
+  if (TheCall->isValueDependent() || TheCall->isTypeDependent())
+    return;
+
   unsigned BuiltinID = FD->getBuiltinID(/*ConsiderWrappers=*/true);
   if (!BuiltinID)
     return;
@@ -431,9 +434,10 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     FunctionName = FunctionName.drop_front(std::strlen("__builtin_"));
   }
 
-  Diag(TheCall->getBeginLoc(), DiagID)
-      << FunctionName << ObjectSize.toString(/*Radix=*/10)
-      << UsedSize.toString(/*Radix=*/10);
+  DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                      PDiag(DiagID)
+                          << FunctionName << ObjectSize.toString(/*Radix=*/10)
+                          << UsedSize.toString(/*Radix=*/10));
 }
 
 static bool SemaBuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
@@ -3425,9 +3429,13 @@ bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_cvtdq2ps512_mask:
   case X86::BI__builtin_ia32_cvtudq2ps512_mask:
   case X86::BI__builtin_ia32_cvtpd2ps512_mask:
+  case X86::BI__builtin_ia32_cvtpd2dq512_mask:
   case X86::BI__builtin_ia32_cvtpd2qq512_mask:
+  case X86::BI__builtin_ia32_cvtpd2udq512_mask:
   case X86::BI__builtin_ia32_cvtpd2uqq512_mask:
+  case X86::BI__builtin_ia32_cvtps2dq512_mask:
   case X86::BI__builtin_ia32_cvtps2qq512_mask:
+  case X86::BI__builtin_ia32_cvtps2udq512_mask:
   case X86::BI__builtin_ia32_cvtps2uqq512_mask:
   case X86::BI__builtin_ia32_cvtqq2pd512_mask:
   case X86::BI__builtin_ia32_cvtqq2ps512_mask:
@@ -11591,6 +11599,9 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
       }
 
       if (const auto *FD = dyn_cast<FunctionDecl>(PV->getDeclContext())) {
+        // Skip function template not specialized yet.
+        if (FD->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate)
+          return;
         auto ParamIter = llvm::find(FD->parameters(), PV);
         assert(ParamIter != FD->param_end());
         unsigned ParamNo = std::distance(FD->param_begin(), ParamIter);
@@ -13916,8 +13927,7 @@ void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
       cast<UnaryOperator>(E)->getOpcode() == UO_AddrOf) {
     auto *Op = cast<UnaryOperator>(E)->getSubExpr()->IgnoreParens();
     if (isa<MemberExpr>(Op)) {
-      auto MA = std::find(MisalignedMembers.begin(), MisalignedMembers.end(),
-                          MisalignedMember(Op));
+      auto MA = llvm::find(MisalignedMembers, MisalignedMember(Op));
       if (MA != MisalignedMembers.end() &&
           (T->isIntegerType() ||
            (T->isPointerType() && (T->getPointeeType()->isIncompleteType() ||

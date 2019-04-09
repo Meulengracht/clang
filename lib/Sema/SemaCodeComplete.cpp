@@ -2605,6 +2605,11 @@ static std::string
 FormatFunctionParameter(const PrintingPolicy &Policy, const ParmVarDecl *Param,
                         bool SuppressName = false, bool SuppressBlock = false,
                         Optional<ArrayRef<QualType>> ObjCSubsts = None) {
+  // Params are unavailable in FunctionTypeLoc if the FunctionType is invalid.
+  // It would be better to pass in the param Type, which is usually avaliable.
+  // But this case is rare, so just pretend we fell back to int as elsewhere.
+  if (!Param)
+    return "int";
   bool ObjCMethodParam = isa<ObjCMethodDecl>(Param->getDeclContext());
   if (Param->getType()->isDependentType() ||
       !Param->getType()->isBlockPointerType()) {
@@ -8379,7 +8384,8 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
   // We need the native slashes for the actual file system interactions.
   SmallString<128> NativeRelDir = StringRef(RelDir);
   llvm::sys::path::native(NativeRelDir);
-  auto FS = getSourceManager().getFileManager().getVirtualFileSystem();
+  llvm::vfs::FileSystem &FS =
+      getSourceManager().getFileManager().getVirtualFileSystem();
 
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
@@ -8425,7 +8431,7 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
 
     std::error_code EC;
     unsigned Count = 0;
-    for (auto It = FS->dir_begin(Dir, EC);
+    for (auto It = FS.dir_begin(Dir, EC);
          !EC && It != llvm::vfs::directory_iterator(); It.increment(EC)) {
       if (++Count == 2500) // If we happen to hit a huge directory,
         break;             // bail out early so we're not too slow.
